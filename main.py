@@ -6,10 +6,10 @@ import json
 
 # Page configuration
 st.set_page_config(
-    page_title="Football Group Stage Generator",
+    page_title="Group Stage Generator",
     layout="wide",
     initial_sidebar_state="expanded",
-    page_icon="⚽"
+    page_icon="🏆"
 )
 
 # Custom CSS for modern, vibrant styling
@@ -521,7 +521,7 @@ for i in range(num_players):
 st.sidebar.markdown("---")
 
 # Generate tournament button
-if st.sidebar.button("🏆 Generate Tournament", type="primary", use_container_width=True):
+if st.sidebar.button("🏆 Generate Tournament", type="primary", width='stretch'):
     # Validate unique names
     if len(set(player_names)) != len(player_names):
         st.sidebar.error("⚠️ All player names must be unique!")
@@ -539,7 +539,7 @@ if st.sidebar.button("🏆 Generate Tournament", type="primary", use_container_w
         st.rerun()
 
 # Reset button
-if st.sidebar.button("🔄 Reset Tournament", use_container_width=True):
+if st.sidebar.button("🔄 Reset Tournament", width='stretch'):
     st.session_state.matches = []
     st.session_state.tournament_generated = False
     st.query_params.clear()
@@ -564,7 +564,7 @@ if st.session_state.tournament_generated:
         file_name="tournament_data.json",
         mime="application/json",
         help="Download tournament data to restore later",
-        use_container_width=True
+        width='stretch'
     )
     
     # Import tournament data
@@ -582,9 +582,6 @@ if st.session_state.tournament_generated:
             st.rerun()
         except Exception as e:
             st.sidebar.error(f"❌ Error loading file: {str(e)}")
-
-# Main content
-st.markdown('<h1 class="trophy-icon">🏆 Football Group Stage Tournament 🏆</h1>', unsafe_allow_html=True)
 
 if not st.session_state.tournament_generated:
     st.info("👈 Configure your tournament in the sidebar and click 'Generate Tournament' to start!")
@@ -672,19 +669,6 @@ else:
     
     # Rename columns for display
     standings_df.columns = ['Pos', 'Player', 'P', 'W', 'D', 'L', 'GF', 'GA', 'GD', 'Pts']
-    
-    # Add medal emojis for top 3
-    def add_medal(row):
-        if row['Pos'] == 1:
-            return f"🥇 {row['Pos']}"
-        elif row['Pos'] == 2:
-            return f"🥈 {row['Pos']}"
-        elif row['Pos'] == 3:
-            return f"🥉 {row['Pos']}"
-        else:
-            return str(row['Pos'])
-    
-    standings_df['Pos'] = standings_df.apply(add_medal, axis=1)
     
     # Display standings
     st.markdown('<h2 style="text-align: center;">📊 Live Standings</h2>', unsafe_allow_html=True)
@@ -783,7 +767,7 @@ else:
                         "✅ Update" if not match['completed'] else "✓ Updated",
                         key=f"update_{match['match_id']}",
                         type="secondary" if match['completed'] else "primary",
-                        use_container_width=True
+                        width='stretch'
                     ):
                         # Update match
                         for m in st.session_state.matches:
@@ -802,19 +786,3 @@ else:
                 if idx < len(round_matches) - 1:
                     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Statistics
-    total_matches = len(st.session_state.matches)
-    completed_matches = sum(1 for m in st.session_state.matches if m['completed'])
-    remaining_matches = total_matches - completed_matches
-    
-    st.markdown("---")
-    st.markdown('<h2 style="text-align: center;">📈 Tournament Statistics</h2>', unsafe_allow_html=True)
-    
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("🎯 Total Matches", total_matches)
-    col2.metric("✅ Completed", completed_matches)
-    col3.metric("⏳ Remaining", remaining_matches)
-    
-    if total_matches > 0:
-        progress = (completed_matches / total_matches) * 100
-        col4.metric("📊 Progress", f"{progress:.1f}%")

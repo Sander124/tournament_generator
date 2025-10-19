@@ -48,18 +48,24 @@ st.markdown("""
         color: white !important;
     }
     
-    /* Force sidebar input text to be white */
-    [data-testid="stSidebar"] input {
-        color: white !important;
+    /* Sidebar input fix - more aggressive */
+    [data-testid="stSidebar"] input[type="text"],
+    [data-testid="stSidebar"] input[type="number"] {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        opacity: 1 !important;
     }
     
-    [data-testid="stSidebar"] [data-baseweb="input"] {
-        background-color: rgba(255, 255, 255, 0.2) !important;
+    [data-testid="stSidebar"] .st-emotion-cache-1cpxqw2 input,
+    [data-testid="stSidebar"] .st-emotion-cache-1cpxqw2 {
+        color: #ffffff !important;
     }
     
-    [data-testid="stSidebar"] [data-baseweb="input"] input {
-        color: white !important;
-        caret-color: white !important;
+    /* Target all possible input containers in sidebar */
+    [data-testid="stSidebar"] div[data-baseweb="input"] > div,
+    [data-testid="stSidebar"] div[data-baseweb="input"] input {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
     }
     
     /* Title styling */
@@ -95,45 +101,72 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
     
-    /* Dataframe styling */
-    [data-testid="stDataFrame"], [class*="stDataFrame"] {
-        background: linear-gradient(135deg, rgba(45, 70, 130, 0.6) 0%, rgba(30, 50, 100, 0.6) 100%) !important;
+    /* Custom standings table */
+    .standings-table {
+        width: 100%;
+        background: linear-gradient(135deg, rgba(45, 70, 130, 0.6) 0%, rgba(30, 50, 100, 0.6) 100%);
         backdrop-filter: blur(10px);
         border-radius: 15px;
-        padding: 1rem;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.5rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        overflow: hidden;
     }
     
-    div[data-testid="stDataFrame"] > div {
-        background: transparent !important;
+    .standings-row {
+        display: grid;
+        grid-template-columns: 60px 2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+        gap: 10px;
+        padding: 12px 20px;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
     }
     
-    [data-testid="stDataFrame"] table {
-        background: transparent !important;
-        color: white !important;
+    .standings-row:hover {
+        background: rgba(61, 90, 254, 0.2);
+        transform: translateX(5px);
     }
     
-    [data-testid="stDataFrame"] thead tr th {
-        background-color: rgba(61, 90, 254, 0.4) !important;
-        color: white !important;
-        font-weight: 600 !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    .standings-header {
+        display: grid;
+        grid-template-columns: 60px 2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+        gap: 10px;
+        padding: 15px 20px;
+        background: rgba(61, 90, 254, 0.4);
+        border-radius: 10px;
+        margin-bottom: 10px;
+        font-weight: 700;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 0.9rem;
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     
-    [data-testid="stDataFrame"] tbody tr td {
-        background-color: rgba(30, 50, 100, 0.3) !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    .standings-cell {
+        color: white;
+        font-family: 'Inter', sans-serif;
+        font-size: 1rem;
+        text-align: center;
     }
     
-    [data-testid="stDataFrame"] tbody tr:hover td {
-        background-color: rgba(61, 90, 254, 0.2) !important;
+    .standings-cell.player-name {
+        text-align: left;
+        font-weight: 600;
+        font-size: 1.1rem;
     }
     
-    /* Override any white backgrounds in dataframe */
-    .stDataFrame div[style*="background-color"] {
-        background-color: transparent !important;
+    .standings-cell.position {
+        font-weight: 700;
+        font-size: 1.2rem;
+        font-family: 'Montserrat', sans-serif;
+    }
+    
+    .standings-cell.points {
+        font-weight: 700;
+        color: #5a7dff;
+        font-size: 1.1rem;
     }
     
     /* Button styling */
@@ -655,23 +688,44 @@ else:
     
     # Display standings
     st.markdown('<h2 style="text-align: center;">📊 Live Standings</h2>', unsafe_allow_html=True)
-    st.dataframe(
-        standings_df,
-        hide_index=True,
-        use_container_width=True,
-        column_config={
-            "Pos": st.column_config.TextColumn("Pos", width="small"),
-            "Player": st.column_config.TextColumn("Player", width="medium"),
-            "P": st.column_config.NumberColumn("P", help="Played"),
-            "W": st.column_config.NumberColumn("W", help="Won"),
-            "D": st.column_config.NumberColumn("D", help="Drawn"),
-            "L": st.column_config.NumberColumn("L", help="Lost"),
-            "GF": st.column_config.NumberColumn("GF", help="Goals For"),
-            "GA": st.column_config.NumberColumn("GA", help="Goals Against"),
-            "GD": st.column_config.NumberColumn("GD", help="Goal Difference"),
-            "Pts": st.column_config.NumberColumn("Pts", help="Points"),
-        }
-    )
+    
+    # Create custom HTML table
+    standings_html = '<div class="standings-table">'
+    
+    # Header
+    standings_html += '''
+    <div class="standings-header">
+        <div class="standings-cell">Pos</div>
+        <div class="standings-cell">Player</div>
+        <div class="standings-cell">P</div>
+        <div class="standings-cell">W</div>
+        <div class="standings-cell">D</div>
+        <div class="standings-cell">L</div>
+        <div class="standings-cell">GF</div>
+        <div class="standings-cell">GA</div>
+        <div class="standings-cell">GD</div>
+        <div class="standings-cell">Pts</div>
+    </div>
+    '''
+    
+    # Rows
+    for idx, row in standings_df.iterrows():
+        standings_html += '<div class="standings-row">'
+        standings_html += f'<div class="standings-cell position">{row["Pos"]}</div>'
+        standings_html += f'<div class="standings-cell player-name">{row["Player"]}</div>'
+        standings_html += f'<div class="standings-cell">{row["P"]}</div>'
+        standings_html += f'<div class="standings-cell">{row["W"]}</div>'
+        standings_html += f'<div class="standings-cell">{row["D"]}</div>'
+        standings_html += f'<div class="standings-cell">{row["L"]}</div>'
+        standings_html += f'<div class="standings-cell">{row["GF"]}</div>'
+        standings_html += f'<div class="standings-cell">{row["GA"]}</div>'
+        standings_html += f'<div class="standings-cell">{row["GD"]}</div>'
+        standings_html += f'<div class="standings-cell points">{row["Pts"]}</div>'
+        standings_html += '</div>'
+    
+    standings_html += '</div>'
+    
+    st.markdown(standings_html, unsafe_allow_html=True)
     
     st.markdown("---")
     

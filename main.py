@@ -6,10 +6,10 @@ import json
 
 # Page configuration
 st.set_page_config(
-    page_title="Football Group Stage Generator",
+    page_title="Group Stage Generator",
     layout="wide",
     initial_sidebar_state="expanded",
-    page_icon="⚽"
+    page_icon="🏆"
 )
 
 # Custom CSS for modern, vibrant styling
@@ -484,11 +484,22 @@ st.sidebar.markdown("""
         -webkit-text-fill-color: #000000 !important;
         font-family: 'Inter', sans-serif !important;
     }
+    
+    /* Also target the increment/decrement buttons container */
+    [data-testid="stSidebar"] .stNumberInput > div > div {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border-radius: 10px !important;
+    }
+    
+    /* Style the +/- buttons */
+    [data-testid="stSidebar"] .stNumberInput button {
+        color: #000000 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # Sidebar
-st.sidebar.markdown('<h2 style="text-align: center;">⚽ Tournament Setup</h2>', unsafe_allow_html=True)
+st.sidebar.markdown('<h2 style="text-align: center;">Tournament Setup</h2>', unsafe_allow_html=True)
 st.sidebar.markdown("---")
 
 # Number of players
@@ -598,9 +609,6 @@ if st.session_state.tournament_generated:
         except Exception as e:
             st.sidebar.error(f"❌ Error loading file: {str(e)}")
 
-# Main content
-st.markdown('<h1 class="trophy-icon">🏆 Football Group Stage Tournament 🏆</h1>', unsafe_allow_html=True)
-
 if not st.session_state.tournament_generated:
     st.info("👈 Configure your tournament in the sidebar and click 'Generate Tournament' to start!")
     
@@ -687,19 +695,6 @@ else:
     
     # Rename columns for display
     standings_df.columns = ['Pos', 'Player', 'P', 'W', 'D', 'L', 'GF', 'GA', 'GD', 'Pts']
-    
-    # Add medal emojis for top 3
-    def add_medal(row):
-        if row['Pos'] == 1:
-            return f"🥇 {row['Pos']}"
-        elif row['Pos'] == 2:
-            return f"🥈 {row['Pos']}"
-        elif row['Pos'] == 3:
-            return f"🥉 {row['Pos']}"
-        else:
-            return str(row['Pos'])
-    
-    standings_df['Pos'] = standings_df.apply(add_medal, axis=1)
     
     # Display standings
     st.markdown('<h2 style="text-align: center;">📊 Live Standings</h2>', unsafe_allow_html=True)
@@ -816,5 +811,3 @@ else:
                 
                 if idx < len(round_matches) - 1:
                     st.markdown("<br>", unsafe_allow_html=True)
-    
-   

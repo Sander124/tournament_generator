@@ -542,7 +542,7 @@ st.sidebar.markdown('<h3 style="text-align: center;">👥 Player Names</h3>', un
 
 # Dynamic player name inputs
 player_names = []
-for i in range(num_players):
+for i in range(int(num_players)):
     default_name = st.session_state.players[i] if i < len(st.session_state.players) else f"Player {i+1}"
     name = st.sidebar.text_input(
         f"Player {i+1}",

@@ -465,7 +465,7 @@ for i in range(num_players):
 st.sidebar.markdown("---")
 
 # Generate tournament button
-if st.sidebar.button("🏆 Generate Tournament", type="primary", use_container_width=True):
+if st.sidebar.button("🏆 Generate Tournament", type="primary", width='stretch'):
     # Validate unique names
     if len(set(player_names)) != len(player_names):
         st.sidebar.error("⚠️ All player names must be unique!")
@@ -483,7 +483,7 @@ if st.sidebar.button("🏆 Generate Tournament", type="primary", use_container_w
         st.rerun()
 
 # Reset button
-if st.sidebar.button("🔄 Reset Tournament", use_container_width=True):
+if st.sidebar.button("🔄 Reset Tournament",width='stretch'):
     st.session_state.matches = []
     st.session_state.tournament_generated = False
     st.query_params.clear()
@@ -508,7 +508,7 @@ if st.session_state.tournament_generated:
         file_name="tournament_data.json",
         mime="application/json",
         help="Download tournament data to restore later",
-        use_container_width=True
+       width='stretch'
     )
     
     # Import tournament data
@@ -622,7 +622,7 @@ else:
     st.dataframe(
         standings_df,
         hide_index=True,
-        use_container_width=True,
+        width='stretch',
         column_config={
             "Pos": st.column_config.TextColumn("Pos", width="small"),
             "Player": st.column_config.TextColumn("Player", width="medium"),
@@ -693,7 +693,7 @@ else:
                         "✅ Update" if not match['completed'] else "✓ Updated",
                         key=f"update_{match['match_id']}",
                         type="secondary" if match['completed'] else "primary",
-                        use_container_width=True
+                        width='stretch'
                     ):
                         # Update match
                         for m in st.session_state.matches:

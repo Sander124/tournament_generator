@@ -471,18 +471,18 @@ def round_robin_schedule(players, rounds):
 # Initialize session state
 init_session_state()
 
-# Alternative: Show helper text for visibility issue
+# Force sidebar input visibility - copy from working match inputs
 st.sidebar.markdown("""
 <style>
-    /* Workaround: Light background for inputs */
-    [data-testid="stSidebar"] .stTextInput > div > div,
-    [data-testid="stSidebar"] .stNumberInput > div > div {
-        background-color: rgba(255, 255, 255, 0.9) !important;
-    }
-    
-    [data-testid="stSidebar"] input {
-        color: #1a1a1a !important;
-        -webkit-text-fill-color: #1a1a1a !important;
+    /* Apply same styling as match score inputs which DO work */
+    [data-testid="stSidebar"] .stTextInput > div > div > input,
+    [data-testid="stSidebar"] .stNumberInput > div > div > input {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        border-radius: 10px !important;
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+        font-family: 'Inter', sans-serif !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -817,19 +817,4 @@ else:
                 if idx < len(round_matches) - 1:
                     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Statistics
-    total_matches = len(st.session_state.matches)
-    completed_matches = sum(1 for m in st.session_state.matches if m['completed'])
-    remaining_matches = total_matches - completed_matches
-    
-    st.markdown("---")
-    st.markdown('<h2 style="text-align: center;">📈 Tournament Statistics</h2>', unsafe_allow_html=True)
-    
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("🎯 Total Matches", total_matches)
-    col2.metric("✅ Completed", completed_matches)
-    col3.metric("⏳ Remaining", remaining_matches)
-    
-    if total_matches > 0:
-        progress = (completed_matches / total_matches) * 100
-        col4.metric("📊 Progress", f"{progress:.1f}%")
+   

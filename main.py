@@ -396,7 +396,7 @@ def init_session_state():
     if 'tournament_generated' not in st.session_state:
         st.session_state.tournament_generated = False
     if 'num_players' not in st.session_state:
-        st.session_state.num_players = 4
+        st.session_state.num_players = 5
     if 'rounds' not in st.session_state:
         st.session_state.rounds = 1
 
@@ -503,13 +503,19 @@ st.sidebar.markdown('<h2 style="text-align: center;">Tournament Setup</h2>', uns
 st.sidebar.markdown("---")
 
 # Number of players
+'''
 num_players = st.sidebar.number_input(
     "Number of Players",
     min_value=2,
     max_value=20,
     value=st.session_state.num_players,
     step=1
-)
+)'''
+num_players = int(st.sidebar.text_input(
+        "5",
+        value=st.session_state.num_players,
+        key="num_players"
+    ))
 
 # Update session state if number changes
 if num_players != st.session_state.num_players:

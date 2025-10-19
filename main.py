@@ -511,9 +511,10 @@ num_players = st.sidebar.number_input(
     value=st.session_state.num_players,
     step=1
 )'''
+default_players = st.session_state.num_players
 num_players = int(st.sidebar.text_input(
         "5",
-        value=st.session_state.num_players,
+        value=default_players,
         key="num_players"
     ))
 

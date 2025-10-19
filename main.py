@@ -6,10 +6,10 @@ import json
 
 # Page configuration
 st.set_page_config(
-    page_title="Group Stage Generator",
+    page_title="Football Group Stage Generator",
     layout="wide",
     initial_sidebar_state="expanded",
-    page_icon="🏆"
+    page_icon="⚽"
 )
 
 # Custom CSS for modern, vibrant styling
@@ -396,7 +396,7 @@ def init_session_state():
     if 'tournament_generated' not in st.session_state:
         st.session_state.tournament_generated = False
     if 'num_players' not in st.session_state:
-        st.session_state.num_players = 5
+        st.session_state.num_players = 4
     if 'rounds' not in st.session_state:
         st.session_state.rounds = 1
 
@@ -499,38 +499,54 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 # Sidebar
-st.sidebar.markdown('<h2 style="text-align: center;">Tournament Setup</h2>', unsafe_allow_html=True)
+st.sidebar.markdown('<h2 style="text-align: center;">⚽ Tournament Setup</h2>', unsafe_allow_html=True)
 st.sidebar.markdown("---")
 
-# Number of players
-'''
-num_players = st.sidebar.number_input(
+# Number of players - using text input as workaround for visibility
+num_players_str = st.sidebar.text_input(
     "Number of Players",
-    min_value=2,
-    max_value=20,
-    value=st.session_state.num_players,
-    step=1
-)'''
-default_players = str(st.session_state.num_players)
-num_players = st.sidebar.text_input("Number of players",
-        value=default_players,
-        key="num_players"
-    )
+    value=str(st.session_state.num_players),
+    key="num_players_input"
+)
+
+# Convert to integer and validate
+try:
+    num_players = int(num_players_str)
+    if num_players < 2:
+        num_players = 2
+        st.sidebar.warning("Minimum 2 players required")
+    elif num_players > 20:
+        num_players = 20
+        st.sidebar.warning("Maximum 20 players allowed")
+except ValueError:
+    num_players = st.session_state.num_players
+    st.sidebar.error("Please enter a valid number")
 
 # Update session state if number changes
 if num_players != st.session_state.num_players:
     st.session_state.num_players = num_players
     st.session_state.tournament_generated = False
 
-# Rounds (how many times each player plays each other)
-rounds = st.sidebar.number_input(
+# Rounds (how many times each player plays each other) - using text input
+rounds_str = st.sidebar.text_input(
     "Rounds (matches per pair)",
-    min_value=1,
-    max_value=5,
-    value=st.session_state.rounds,
-    step=1,
+    value=str(st.session_state.rounds),
+    key="rounds_input",
     help="Number of times each player plays against each other player"
 )
+
+# Convert to integer and validate
+try:
+    rounds = int(rounds_str)
+    if rounds < 1:
+        rounds = 1
+        st.sidebar.warning("Minimum 1 round required")
+    elif rounds > 5:
+        rounds = 5
+        st.sidebar.warning("Maximum 5 rounds allowed")
+except ValueError:
+    rounds = st.session_state.rounds
+    st.sidebar.error("Please enter a valid number")
 
 if rounds != st.session_state.rounds:
     st.session_state.rounds = rounds
@@ -541,7 +557,7 @@ st.sidebar.markdown('<h3 style="text-align: center;">👥 Player Names</h3>', un
 
 # Dynamic player name inputs
 player_names = []
-for i in range(int(num_players)):
+for i in range(num_players):
     default_name = st.session_state.players[i] if i < len(st.session_state.players) else f"Player {i+1}"
     name = st.sidebar.text_input(
         f"Player {i+1}",
@@ -614,6 +630,9 @@ if st.session_state.tournament_generated:
             st.rerun()
         except Exception as e:
             st.sidebar.error(f"❌ Error loading file: {str(e)}")
+
+# Main content
+st.markdown('<h1 class="trophy-icon">🏆 Football Group Stage Tournament 🏆</h1>', unsafe_allow_html=True)
 
 if not st.session_state.tournament_generated:
     st.info("👈 Configure your tournament in the sidebar and click 'Generate Tournament' to start!")
@@ -701,6 +720,19 @@ else:
     
     # Rename columns for display
     standings_df.columns = ['Pos', 'Player', 'P', 'W', 'D', 'L', 'GF', 'GA', 'GD', 'Pts']
+    
+    # Add medal emojis for top 3
+    def add_medal(row):
+        if row['Pos'] == 1:
+            return f"🥇 {row['Pos']}"
+        elif row['Pos'] == 2:
+            return f"🥈 {row['Pos']}"
+        elif row['Pos'] == 3:
+            return f"🥉 {row['Pos']}"
+        else:
+            return str(row['Pos'])
+    
+    standings_df['Pos'] = standings_df.apply(add_medal, axis=1)
     
     # Display standings
     st.markdown('<h2 style="text-align: center;">📊 Live Standings</h2>', unsafe_allow_html=True)
@@ -817,3 +849,20 @@ else:
                 
                 if idx < len(round_matches) - 1:
                     st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Statistics
+    total_matches = len(st.session_state.matches)
+    completed_matches = sum(1 for m in st.session_state.matches if m['completed'])
+    remaining_matches = total_matches - completed_matches
+    
+    st.markdown("---")
+    st.markdown('<h2 style="text-align: center;">📈 Tournament Statistics</h2>', unsafe_allow_html=True)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("🎯 Total Matches", total_matches)
+    col2.metric("✅ Completed", completed_matches)
+    col3.metric("⏳ Remaining", remaining_matches)
+    
+    if total_matches > 0:
+        progress = (completed_matches / total_matches) * 100
+        col4.metric("📊 Progress", f"{progress:.1f}%")

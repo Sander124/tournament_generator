@@ -48,38 +48,23 @@ st.markdown("""
         color: white !important;
     }
     
-    /* Sidebar input fix - MAXIMUM aggression */
+    /* Sidebar input - nuclear option with specific Streamlit classes */
     [data-testid="stSidebar"] input {
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        opacity: 1 !important;
+        color: white !important;
+        -webkit-text-fill-color: white !important;
     }
     
-    [data-testid="stSidebar"] input::placeholder {
-        color: rgba(255, 255, 255, 0.5) !important;
-        -webkit-text-fill-color: rgba(255, 255, 255, 0.5) !important;
-    }
-    
-    /* Target every possible class that Streamlit might use */
-    [data-testid="stSidebar"] [class*="input"],
-    [data-testid="stSidebar"] [class*="Input"],
-    [data-testid="stSidebar"] [data-baseweb="input"],
-    [data-testid="stSidebar"] [data-baseweb="input"] input,
-    [data-testid="stSidebar"] [data-baseweb="input"] > div,
-    [data-testid="stSidebar"] .st-emotion-cache-1cpxqw2,
-    [data-testid="stSidebar"] .st-emotion-cache-1cpxqw2 input {
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-    }
-    
-    /* Force text and number inputs specifically */
+    /* Override Streamlit's default input styling */
     [data-testid="stSidebar"] .stTextInput input,
-    [data-testid="stSidebar"] .stNumberInput input,
-    [data-testid="stSidebar"] input[type="text"],
-    [data-testid="stSidebar"] input[type="number"] {
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        background-color: rgba(255, 255, 255, 0.2) !important;
+    [data-testid="stSidebar"] .stNumberInput input {
+        color: white !important;
+        -webkit-text-fill-color: white !important;
+        filter: brightness(1) !important;
+    }
+    
+    /* Add text shadow for extra visibility */
+    [data-testid="stSidebar"] input {
+        text-shadow: 0 0 1px rgba(255, 255, 255, 0.5) !important;
     }
     
     /* Title styling */
@@ -485,6 +470,22 @@ def round_robin_schedule(players, rounds):
 
 # Initialize session state
 init_session_state()
+
+# Alternative: Show helper text for visibility issue
+st.sidebar.markdown("""
+<style>
+    /* Workaround: Light background for inputs */
+    [data-testid="stSidebar"] .stTextInput > div > div,
+    [data-testid="stSidebar"] .stNumberInput > div > div {
+        background-color: rgba(255, 255, 255, 0.9) !important;
+    }
+    
+    [data-testid="stSidebar"] input {
+        color: #1a1a1a !important;
+        -webkit-text-fill-color: #1a1a1a !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # Sidebar
 st.sidebar.markdown('<h2 style="text-align: center;">⚽ Tournament Setup</h2>', unsafe_allow_html=True)

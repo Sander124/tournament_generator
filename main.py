@@ -9,6 +9,7 @@ st.set_page_config(
     page_title="Football Group Stage Generator",
     layout="wide",
     initial_sidebar_state="expanded",
+    page_icon="⚽"
 )
 
 # Custom CSS for modern, vibrant styling
@@ -47,6 +48,20 @@ st.markdown("""
         color: white !important;
     }
     
+    /* Force sidebar input text to be white */
+    [data-testid="stSidebar"] input {
+        color: white !important;
+    }
+    
+    [data-testid="stSidebar"] [data-baseweb="input"] {
+        background-color: rgba(255, 255, 255, 0.2) !important;
+    }
+    
+    [data-testid="stSidebar"] [data-baseweb="input"] input {
+        color: white !important;
+        caret-color: white !important;
+    }
+    
     /* Title styling */
     h1 {
         font-family: 'Montserrat', sans-serif;
@@ -81,8 +96,8 @@ st.markdown("""
     }
     
     /* Dataframe styling */
-    .stDataFrame {
-        background: linear-gradient(135deg, rgba(45, 70, 130, 0.6) 0%, rgba(30, 50, 100, 0.6) 100%);
+    [data-testid="stDataFrame"], [class*="stDataFrame"] {
+        background: linear-gradient(135deg, rgba(45, 70, 130, 0.6) 0%, rgba(30, 50, 100, 0.6) 100%) !important;
         backdrop-filter: blur(10px);
         border-radius: 15px;
         padding: 1rem;
@@ -90,27 +105,35 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
     
-    .stDataFrame [data-testid="stTable"] {
-        background: transparent;
+    div[data-testid="stDataFrame"] > div {
+        background: transparent !important;
     }
     
-    .stDataFrame table {
+    [data-testid="stDataFrame"] table {
+        background: transparent !important;
         color: white !important;
     }
     
-    .stDataFrame th {
-        background: rgba(61, 90, 254, 0.3) !important;
+    [data-testid="stDataFrame"] thead tr th {
+        background-color: rgba(61, 90, 254, 0.4) !important;
         color: white !important;
-        font-weight: 600;
+        font-weight: 600 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
     
-    .stDataFrame td {
-        background: rgba(255, 255, 255, 0.05) !important;
+    [data-testid="stDataFrame"] tbody tr td {
+        background-color: rgba(30, 50, 100, 0.3) !important;
         color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
     }
     
-    .stDataFrame tr:hover td {
-        background: rgba(255, 255, 255, 0.1) !important;
+    [data-testid="stDataFrame"] tbody tr:hover td {
+        background-color: rgba(61, 90, 254, 0.2) !important;
+    }
+    
+    /* Override any white backgrounds in dataframe */
+    .stDataFrame div[style*="background-color"] {
+        background-color: transparent !important;
     }
     
     /* Button styling */
@@ -417,7 +440,7 @@ def round_robin_schedule(players, rounds):
 init_session_state()
 
 # Sidebar
-st.sidebar.markdown('<h2 style="text-align: center;">Tournament Setup</h2>', unsafe_allow_html=True)
+st.sidebar.markdown('<h2 style="text-align: center;">⚽ Tournament Setup</h2>', unsafe_allow_html=True)
 st.sidebar.markdown("---")
 
 # Number of players
@@ -465,7 +488,7 @@ for i in range(num_players):
 st.sidebar.markdown("---")
 
 # Generate tournament button
-if st.sidebar.button("🏆 Generate Tournament", type="primary", width='stretch'):
+if st.sidebar.button("🏆 Generate Tournament", type="primary", use_container_width=True):
     # Validate unique names
     if len(set(player_names)) != len(player_names):
         st.sidebar.error("⚠️ All player names must be unique!")
@@ -483,7 +506,7 @@ if st.sidebar.button("🏆 Generate Tournament", type="primary", width='stretch'
         st.rerun()
 
 # Reset button
-if st.sidebar.button("🔄 Reset Tournament",width='stretch'):
+if st.sidebar.button("🔄 Reset Tournament", use_container_width=True):
     st.session_state.matches = []
     st.session_state.tournament_generated = False
     st.query_params.clear()
@@ -508,7 +531,7 @@ if st.session_state.tournament_generated:
         file_name="tournament_data.json",
         mime="application/json",
         help="Download tournament data to restore later",
-       width='stretch'
+        use_container_width=True
     )
     
     # Import tournament data
@@ -528,7 +551,7 @@ if st.session_state.tournament_generated:
             st.sidebar.error(f"❌ Error loading file: {str(e)}")
 
 # Main content
-st.markdown('<h1 class="trophy-icon">🏆 Group Stage Tournament 🏆</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="trophy-icon">🏆 Football Group Stage Tournament 🏆</h1>', unsafe_allow_html=True)
 
 if not st.session_state.tournament_generated:
     st.info("👈 Configure your tournament in the sidebar and click 'Generate Tournament' to start!")
@@ -617,12 +640,25 @@ else:
     # Rename columns for display
     standings_df.columns = ['Pos', 'Player', 'P', 'W', 'D', 'L', 'GF', 'GA', 'GD', 'Pts']
     
+    # Add medal emojis for top 3
+    def add_medal(row):
+        if row['Pos'] == 1:
+            return f"🥇 {row['Pos']}"
+        elif row['Pos'] == 2:
+            return f"🥈 {row['Pos']}"
+        elif row['Pos'] == 3:
+            return f"🥉 {row['Pos']}"
+        else:
+            return str(row['Pos'])
+    
+    standings_df['Pos'] = standings_df.apply(add_medal, axis=1)
+    
     # Display standings
     st.markdown('<h2 style="text-align: center;">📊 Live Standings</h2>', unsafe_allow_html=True)
     st.dataframe(
         standings_df,
         hide_index=True,
-        width='stretch',
+        use_container_width=True,
         column_config={
             "Pos": st.column_config.TextColumn("Pos", width="small"),
             "Player": st.column_config.TextColumn("Player", width="medium"),
@@ -693,7 +729,7 @@ else:
                         "✅ Update" if not match['completed'] else "✓ Updated",
                         key=f"update_{match['match_id']}",
                         type="secondary" if match['completed'] else "primary",
-                        width='stretch'
+                        use_container_width=True
                     ):
                         # Update match
                         for m in st.session_state.matches:
@@ -712,3 +748,19 @@ else:
                 if idx < len(round_matches) - 1:
                     st.markdown("<br>", unsafe_allow_html=True)
     
+    # Statistics
+    total_matches = len(st.session_state.matches)
+    completed_matches = sum(1 for m in st.session_state.matches if m['completed'])
+    remaining_matches = total_matches - completed_matches
+    
+    st.markdown("---")
+    st.markdown('<h2 style="text-align: center;">📈 Tournament Statistics</h2>', unsafe_allow_html=True)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("🎯 Total Matches", total_matches)
+    col2.metric("✅ Completed", completed_matches)
+    col3.metric("⏳ Remaining", remaining_matches)
+    
+    if total_matches > 0:
+        progress = (completed_matches / total_matches) * 100
+        col4.metric("📊 Progress", f"{progress:.1f}%")

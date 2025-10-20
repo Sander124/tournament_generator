@@ -922,21 +922,23 @@ with tab2:
     elo_df = get_elo_rankings()
     
     if elo_df is not None and not elo_df.empty:
-        # Create custom HTML table for ELO rankings
-        elo_html = '<div class="standings-table">'
+        # Create compact HTML table for ELO rankings
+        elo_html = '''
+        <div class="standings-table" style="max-width: 600px; margin: 0 auto;">
+        '''
         
-        # Header for ELO rankings
+        # Header for ELO rankings - compact version
         elo_html += '''
-        <div class="standings-header">
+        <div class="standings-header" style="grid-template-columns: 80px 1fr 100px;">
             <div class="standings-cell">Rank</div>
             <div class="standings-cell">Player</div>
             <div class="standings-cell">ELO</div>
         </div>
         '''
         
-        # Rows for ELO rankings
+        # Rows for ELO rankings - compact version
         for idx, row in elo_df.iterrows():
-            elo_html += '<div class="standings-row">'
+            elo_html += '<div class="standings-row" style="grid-template-columns: 80px 1fr 100px;">'
             elo_html += f'<div class="standings-cell position">{idx}</div>'
             elo_html += f'<div class="standings-cell player-name">{row["player"]}</div>'
             elo_html += f'<div class="standings-cell points">{int(row["ELO"])}</div>'
@@ -945,17 +947,7 @@ with tab2:
         elo_html += '</div>'
         
         st.markdown(elo_html, unsafe_allow_html=True)
+
         
     else:
         st.warning("No ELO data found in the database. Please check your database connection and data.")
-        st.info("""
-        **Expected database structure:**
-        - Database: 'tournamentDB'
-        - Collection: Any collection with player data
-        - Fields: Should contain player names and ELO ratings
-        
-        **If you're seeing this message:**
-        1. Make sure your MongoDB connection string is correct
-        2. Verify there is data in the tournamentDB database
-        3. Check that the data has player names and ELO values
-        """)

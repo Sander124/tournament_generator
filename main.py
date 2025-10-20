@@ -931,7 +931,7 @@ with tab2:
         elo_html += '''
         <div class="standings-header" style="grid-template-columns: 80px 1fr 100px;">
             <div class="standings-cell">Rank</div>
-            <div class="standings-cell">Player</div>
+            <div class="standings-cell" style="text-align: center;">Player</div>
             <div class="standings-cell">ELO</div>
         </div>
         '''
@@ -940,14 +940,13 @@ with tab2:
         for idx, row in elo_df.iterrows():
             elo_html += '<div class="standings-row" style="grid-template-columns: 80px 1fr 100px;">'
             elo_html += f'<div class="standings-cell position">{idx}</div>'
-            elo_html += f'<div class="standings-cell player-name">{row["player"]}</div>'
+            elo_html += f'<div class="standings-cell player-name" style="text-align: center;">{row["player"]}</div>'
             elo_html += f'<div class="standings-cell points">{int(row["ELO"])}</div>'
             elo_html += '</div>'
         
         elo_html += '</div>'
         
         st.markdown(elo_html, unsafe_allow_html=True)
-
         
     else:
         st.warning("No ELO data found in the database. Please check your database connection and data.")

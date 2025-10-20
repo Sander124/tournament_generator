@@ -1037,4 +1037,4 @@ with tab2:
         3. Check if the collection exists and has data
         4. Verify field names match ('player' and 'ELO' or similar)
         """)
-)
+

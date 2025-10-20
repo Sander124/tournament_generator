@@ -417,7 +417,8 @@ def save_to_query_params():
 def init_connection():
     try:
         client = pymongo.MongoClient(st.secrets["mongo"]["connection_string"])
-        return client[st.secrets["mongo"]["database"]]
+        # Access the tournamentDB database
+        return client["tournamentDB"]
     except Exception as e:
         st.error(f"Database connection failed: {e}")
         return None
@@ -425,27 +426,75 @@ def init_connection():
 def get_elo_rankings():
     """Fetch ELO rankings from MongoDB"""
     db = init_connection()
-    st.write(db.tournamentDB)
     if db is None:
+        st.error("❌ Database connection failed in get_elo_rankings()")
         return None
     
     try:
-        # Assuming your collection name is 'players' or similar
-        # Adjust the collection name as needed
-        collection = db['players']
-        players_data = list(collection.find({}, {'player': 1, 'ELO': 1, '_id': 0}))
+        # Try different possible collection names within tournamentDB
+        collection_names = ['players', 'player', 'elos', 'elo_rankings', 'rankings']
         
-        # Convert to DataFrame and sort by ELO (descending)
-        if players_data:
-            df = pd.DataFrame(players_data)
-            df = df.sort_values('ELO', ascending=False)
-            df = df.reset_index(drop=True)
-            df.index = df.index + 1  # Start positions from 1
-            return df
-        else:
-            return None
+        for collection_name in collection_names:
+            try:
+                collection = db[collection_name]
+                # Try different possible field names
+                players_data = list(collection.find({}, {'_id': 0}).limit(50))  # Limit for safety
+                
+                if players_data:
+                    st.success(f"✅ Found collection: '{collection_name}' in tournamentDB")
+                    
+                    # Normalize field names - try common variations
+                    normalized_data = []
+                    for doc in players_data:
+                        normalized_doc = {}
+                        # Handle player name field
+                        if 'player' in doc:
+                            normalized_doc['player'] = doc['player']
+                        elif 'name' in doc:
+                            normalized_doc['player'] = doc['name']
+                        elif 'username' in doc:
+                            normalized_doc['player'] = doc['username']
+                        elif 'Player' in doc:
+                            normalized_doc['player'] = doc['Player']
+                        else:
+                            continue  # Skip if no player name found
+                        
+                        # Handle ELO field
+                        if 'ELO' in doc:
+                            normalized_doc['ELO'] = doc['ELO']
+                        elif 'elo' in doc:
+                            normalized_doc['ELO'] = doc['elo']
+                        elif 'rating' in doc:
+                            normalized_doc['ELO'] = doc['rating']
+                        elif 'Rating' in doc:
+                            normalized_doc['ELO'] = doc['Rating']
+                        elif 'score' in doc:
+                            normalized_doc['ELO'] = doc['score']
+                        else:
+                            continue  # Skip if no ELO field found
+                        
+                        normalized_data.append(normalized_doc)
+                    
+                    if normalized_data:
+                        st.success(f"✅ Successfully normalized {len(normalized_data)} records")
+                        # Convert to DataFrame and sort by ELO (descending)
+                        df = pd.DataFrame(normalized_data)
+                        df = df.sort_values('ELO', ascending=False)
+                        df = df.reset_index(drop=True)
+                        df.index = df.index + 1  # Start positions from 1
+                        return df
+                    else:
+                        st.warning(f"⚠️ Found collection '{collection_name}' but couldn't normalize data fields")
+                        
+            except Exception as e:
+                st.write(f"❌ Collection '{collection_name}' not found or error: {e}")
+                continue
+        
+        st.error("❌ No suitable collection found with player and ELO data in tournamentDB")
+        return None
+        
     except Exception as e:
-        st.error(f"Error fetching ELO rankings: {e}")
+        st.error(f"❌ Error fetching ELO rankings: {e}")
         return None
 
 def round_robin_schedule(players, rounds):
@@ -878,6 +927,60 @@ with tab1:
 with tab2:
     st.markdown('<h2 style="text-align: center;">📈 ELO Rankings</h2>', unsafe_allow_html=True)
     
+    # Debug section - show raw database content
+    st.markdown("### 🔍 Database Debug Information")
+    
+    db = init_connection()
+    if db is not None:
+        try:
+            st.success("✅ Connected to tournamentDB successfully!")
+            
+            # Show all available collections in tournamentDB
+            collection_names = db.list_collection_names()
+            st.write(f"**Available collections in tournamentDB:** {collection_names}")
+            
+            # Try to get data from each collection
+            for collection_name in collection_names:
+                st.markdown(f"---")
+                st.subheader(f"Collection: `{collection_name}`")
+                
+                try:
+                    collection = db[collection_name]
+                    # Get sample data (first 10 documents)
+                    sample_data = list(collection.find({}, {'_id': 0}).limit(10))
+                    
+                    if sample_data:
+                        st.write(f"**First {len(sample_data)} documents in '{collection_name}':**")
+                        
+                        # Show as JSON
+                        with st.expander("View as JSON"):
+                            st.json(sample_data)
+                        
+                        # Show as DataFrame
+                        with st.expander("View as DataFrame"):
+                            sample_df = pd.DataFrame(sample_data)
+                            if not sample_df.empty:
+                                st.dataframe(sample_df)
+                                
+                                # Show column names and data types
+                                st.write("**Column info:**")
+                                st.write(sample_df.dtypes)
+                            else:
+                                st.write("No data to display")
+                    else:
+                        st.info(f"Collection '{collection_name}' is empty")
+                        
+                except Exception as e:
+                    st.error(f"Error reading collection '{collection_name}': {e}")
+                    
+        except Exception as e:
+            st.error(f"❌ Error accessing tournamentDB: {e}")
+    else:
+        st.error("❌ Cannot connect to tournamentDB")
+    
+    st.markdown("---")
+    st.markdown("### 🏆 ELO Rankings Table")
+    
     # Fetch ELO rankings from database
     elo_df = get_elo_rankings()
     
@@ -921,24 +1024,17 @@ with tab2:
             st.metric("Average ELO", avg_elo)
         
     else:
-        
         st.warning("No ELO data found in the database. Please check your database connection and data.")
         st.info("""
         **Expected database structure:**
-        - Collection: 'players' (or adjust in code)
+        - Database: 'tournamentDB'
+        - Collection: 'players' (or similar)
         - Fields: 'player' (string), 'ELO' (number)
         
-        **To test the connection:**
-        1. Make sure your MongoDB connection string is correct
-        2. Ensure the database has a collection with player ELO data
-        3. Verify the collection has documents with 'player' and 'ELO' fields
+        **Common issues:**
+        1. Check if your MongoDB connection string is correct
+        2. Verify the database name is 'tournamentDB'
+        3. Check if the collection exists and has data
+        4. Verify field names match ('player' and 'ELO' or similar)
         """)
-
-# Footer
-st.markdown("---")
-st.markdown(
-    '<div style="text-align: center; color: rgba(255, 255, 255, 0.7); font-family: Inter, sans-serif;">'
-    'Made with ❤️ | Tournament Generator v2.0 | Now with ELO Rankings!'
-    '</div>',
-    unsafe_allow_html=True
 )

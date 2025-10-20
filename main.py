@@ -906,7 +906,7 @@ if st.session_state.tournament_generated:
     st.sidebar.download_button(
         label="📥 Download Tournament",
         data=json.dumps(export_data, indent=2),
-        file_file_name="tournament_data.json",
+        file_name="tournament_data.json",
         mime="application/json",
         help="Download tournament data to restore later",
         use_container_width=True

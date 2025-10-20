@@ -425,7 +425,7 @@ def init_connection():
 def get_elo_rankings():
     """Fetch ELO rankings from MongoDB"""
     db = init_connection()
-    
+    st.write(db.list_collection_names())
     if db is None:
         return None
     
@@ -921,7 +921,7 @@ with tab2:
             st.metric("Average ELO", avg_elo)
         
     else:
-        st.write(db.list_collection_names())
+        
         st.warning("No ELO data found in the database. Please check your database connection and data.")
         st.info("""
         **Expected database structure:**

@@ -411,6 +411,16 @@ def save_to_query_params():
     }
     st.query_params['tournament_data'] = json.dumps(data)
 
+# MongoDB connection
+@st.cache_resource
+def init_connection():
+    try:
+        client = pymongo.MongoClient(st.secrets["mongo"]["connection_string"])
+        return client[st.secrets["mongo"]["database"]]
+    except Exception as e:
+        st.error(f"Database connection failed: {e}")
+        return None
+        
 def round_robin_schedule(players, rounds):
     """
     Generate a balanced round-robin schedule using the circle method.

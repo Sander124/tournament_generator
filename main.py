@@ -1021,12 +1021,10 @@ if st.session_state.tournament_generated:
             st.sidebar.error(f"❌ Error loading file: {str(e)}")
 
 # Main content with tabs
-tab1, tab2 = st.tabs(["🏆 Tournament", "📈 ELO Rankings"])
+tab1, tab2 = st.tabs(["Tournament", "ELO Rankings"])
 
 with tab1:
     if not st.session_state.tournament_generated:
-        st.info("👈 Configure your tournament in the sidebar and click 'Generate Tournament' to start!")
-        
         col1, col2 = st.columns(2)
         
         with col1:

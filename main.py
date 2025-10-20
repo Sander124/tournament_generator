@@ -698,7 +698,7 @@ if st.session_state.selected_players:
             st.sidebar.markdown(
                 f'<div style="background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 8px; margin: 5px 0; border: 1px solid rgba(255,255,255,0.2);">'
                 f'<span style="font-weight: 600; color: white;">{player["name"]}</span> '
-                f'<span style="color: #5a7dff; font-size: 0.9em;">({player["elo"]} ELO)</span>'
+                f'<span style="color: #5a7dff; font-size: 0.9em;">({player["elo"]})</span>'
                 f'</div>',
                 unsafe_allow_html=True
             )

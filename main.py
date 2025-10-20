@@ -932,6 +932,7 @@ if st.session_state.tournament_generated:
 tab1, tab2 = st.tabs(["🏆 Tournament", "📈 ELO Rankings"])
 
 with tab1:
+    with tab1:
     if not st.session_state.tournament_generated:
         st.info("👈 Configure your tournament in the sidebar and click 'Generate Tournament' to start!")
         
@@ -939,25 +940,33 @@ with tab1:
         
         with col1:
             st.markdown("""
-            ### 🎯 How to use:
-            1. **Select players** - Choose from database or add new ones
-            2. **Set rounds** - Decide how many times each pair plays
-            3. **Generate!** - Click the button to create your tournament
-            4. **Enter scores** - Update results as matches are played
-            5. **Track standings** - Watch the leaderboard update in real-time
-            6. **ELO updates** - Player ratings automatically adjust after matches
-            """)
+            <div class="how-to-use-section">
+            <h3>🎯 How to use:</h3>
+            <ol>
+            <li><strong>Select players</strong> - Choose from database or add new ones</li>
+            <li><strong>Set rounds</strong> - Decide how many times each pair plays</li>
+            <li><strong>Generate!</strong> - Click the button to create your tournament</li>
+            <li><strong>Enter scores</strong> - Update results as matches are played</li>
+            <li><strong>Track standings</strong> - Watch the leaderboard update in real-time</li>
+            <li><strong>ELO updates</strong> - Player ratings automatically adjust after matches</li>
+            </ol>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col2:
             st.markdown("""
-            ### 💡 Features:
-            - **Smart Scheduling** - Uses official round-robin algorithm
-            - **Auto ELO Updates** - Ratings adjust automatically after matches
-            - **Real-time Rankings** - ELO rankings update instantly
-            - **Database Integration** - All data stored in MongoDB
-            - **Export/Import** - Download and restore tournaments
-            - **Fair Distribution** - Balanced match scheduling
-            """)
+            <div class="how-to-use-section">
+            <h3>💡 Features:</h3>
+            <ul>
+            <li><strong>Smart Scheduling</strong> - Uses official round-robin algorithm</li>
+            <li><strong>Auto ELO Updates</strong> - Ratings adjust automatically after matches</li>
+            <li><strong>Real-time Rankings</strong> - ELO rankings update instantly</li>
+            <li><strong>Database Integration</strong> - All data stored in MongoDB</li>
+            <li><strong>Export/Import</strong> - Download and restore tournaments</li>
+            <li><strong>Fair Distribution</strong> - Balanced match scheduling</li>
+            </ul>
+            </div>
+            """, unsafe_allow_html=True)
     else:
         # Calculate standings
         def calculate_standings():

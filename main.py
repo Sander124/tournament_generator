@@ -802,8 +802,6 @@ if st.session_state.selected_players:
                 st.session_state.selected_players.pop(i)
                 st.session_state.tournament_generated = False
                 st.rerun()
-else:
-    st.sidebar.info("No players selected")
 
 # Add new player section
 st.sidebar.markdown("---")

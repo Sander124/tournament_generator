@@ -406,8 +406,8 @@ def save_to_query_params():
         'players': st.session_state.players,
         'matches': st.session_state.matches,
         'tournament_generated': st.session_state.tournament_generated,
-        'num_players': st.session_state.num_players,
-        'rounds': st.session_state.rounds
+        'rounds': st.session_state.rounds,
+        'selected_players': st.session_state.selected_players
     }
     st.query_params['tournament_data'] = json.dumps(data)
 

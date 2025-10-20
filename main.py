@@ -946,20 +946,6 @@ with tab2:
         
         st.markdown(elo_html, unsafe_allow_html=True)
         
-        # Add some statistics
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Total Players", len(elo_df))
-        
-        with col2:
-            highest_elo = int(elo_df['ELO'].max())
-            st.metric("Highest ELO", highest_elo)
-        
-        with col3:
-            avg_elo = int(elo_df['ELO'].mean())
-            st.metric("Average ELO", avg_elo)
-        
     else:
         st.warning("No ELO data found in the database. Please check your database connection and data.")
         st.info("""

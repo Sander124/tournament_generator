@@ -720,18 +720,9 @@ new_player_name = st.sidebar.text_input(
     key="new_player_input"
 )
 
-col1, col2 = st.sidebar.columns(2)
-with col1:
-    new_player_elo = st.sidebar.number_input(
-        "ELO Rating",
-        min_value=0,
-        max_value=3000,
-        value=500,
-        key="new_player_elo"
-    )
-with col2:
-    st.sidebar.markdown("<br>", unsafe_allow_html=True)
-    add_button = st.sidebar.button("Add Player", type="secondary", use_container_width=True)
+new_player_elo = 500
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
+add_button = st.sidebar.button("Add Player", type="secondary", use_container_width=True)
 
 if add_button and new_player_name.strip():
     # Check if player already exists in database

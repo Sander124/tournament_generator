@@ -668,7 +668,7 @@ available_players = [p for p in all_players if p['name'] not in [sp['name'] for 
 # Player selection dropdown
 if available_players:
     # Create formatted options for dropdown
-    dropdown_options = [f"{p['name']} ({p['elo']} ELO)" for p in available_players]
+    dropdown_options = [f"{p['name']} ({p['elo']})" for p in available_players]
     dropdown_options.insert(0, "Select a player...")
     
     selected_option = st.sidebar.selectbox(

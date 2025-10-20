@@ -425,6 +425,7 @@ def init_connection():
 def get_elo_rankings():
     """Fetch ELO rankings from MongoDB"""
     db = init_connection()
+    print(db)
     if db is None:
         return None
     

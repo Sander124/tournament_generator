@@ -765,7 +765,7 @@ st.sidebar.markdown("""
 
 # Sidebar
 st.sidebar.markdown('<h2 style="text-align: center;">Tournament Setup</h2>', unsafe_allow_html=True)
-st.sidebar.markdown("---")
+#st.sidebar.markdown("---")
 
 # Initialize session state for selected players
 if 'selected_players' not in st.session_state:
@@ -779,7 +779,7 @@ def get_all_players_from_db():
     
     try:
         # Try different collection names
-        collection_names = ['players', 'player', 'elos', 'elo_rankings', 'rankings', 'tournamentDB']
+        collection_names = ['players']
         
         for collection_name in collection_names:
             try:

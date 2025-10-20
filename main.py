@@ -422,6 +422,102 @@ def init_connection():
         st.error(f"Database connection failed: {e}")
         return None
 
+def get_player_elo(player_name):
+    """Get current ELO of a player from database"""
+    db = init_connection()
+    if db is None:
+        return 500  # Default ELO if no connection
+    
+    try:
+        collection_names = ['players', 'player', 'elos', 'elo_rankings']
+        
+        for collection_name in collection_names:
+            try:
+                collection = db[collection_name]
+                player_data = collection.find_one({'player': player_name})
+                if player_data and 'ELO' in player_data:
+                    return player_data['ELO']
+            except:
+                continue
+        return 500  # Default ELO if player not found
+    except:
+        return 500
+
+def update_player_elo(player_name, new_elo):
+    """Update player's ELO in database"""
+    db = init_connection()
+    if db is None:
+        return False
+    
+    try:
+        collection_names = ['players', 'player', 'elos', 'elo_rankings']
+        
+        for collection_name in collection_names:
+            try:
+                collection = db[collection_name]
+                result = collection.update_one(
+                    {'player': player_name},
+                    {'$set': {'ELO': new_elo}},
+                    upsert=True  # Create if doesn't exist
+                )
+                return result.modified_count > 0 or result.upserted_id is not None
+            except:
+                continue
+        return False
+    except:
+        return False
+
+def calculate_elo_change(player1_elo, player2_elo, score1, score2, k_factor=32):
+    """
+    Calculate ELO changes after a match
+    score1 and score2 are the actual scores
+    Returns: (new_elo1, new_elo2, change1, change2)
+    """
+    # Calculate expected scores
+    expected1 = 1 / (1 + 10 ** ((player2_elo - player1_elo) / 400))
+    expected2 = 1 / (1 + 10 ** ((player1_elo - player2_elo) / 400))
+    
+    # Determine actual scores based on match result
+    if score1 > score2:
+        actual1, actual2 = 1, 0  # Player 1 wins
+    elif score2 > score1:
+        actual1, actual2 = 0, 1  # Player 2 wins
+    else:
+        actual1, actual2 = 0.5, 0.5  # Draw
+    
+    # Calculate ELO changes
+    change1 = k_factor * (actual1 - expected1)
+    change2 = k_factor * (actual2 - expected2)
+    
+    # Calculate new ELOs
+    new_elo1 = player1_elo + change1
+    new_elo2 = player2_elo + change2
+    
+    return round(new_elo1), round(new_elo2), round(change1), round(change2)
+
+def update_match_with_elo(match, score1, score2):
+    """Update match and calculate ELO changes"""
+    # Get current ELOs
+    player1_elo = get_player_elo(match['player1'])
+    player2_elo = get_player_elo(match['player2'])
+    
+    # Calculate new ELOs
+    new_elo1, new_elo2, change1, change2 = calculate_elo_change(
+        player1_elo, player2_elo, score1, score2
+    )
+    
+    # Update database
+    update_player_elo(match['player1'], new_elo1)
+    update_player_elo(match['player2'], new_elo2)
+    
+    # Return ELO change information
+    return {
+        'player1_elo_change': change1,
+        'player2_elo_change': change2,
+        'player1_new_elo': new_elo1,
+        'player2_new_elo': new_elo2
+    }
+
 def get_elo_rankings():
     """Fetch ELO rankings from MongoDB"""
     db = init_connection()
@@ -531,7 +627,8 @@ def round_robin_schedule(players, rounds):
                         'player2': player2,
                         'score1': None,
                         'score2': None,
-                        'completed': False
+                        'completed': False,
+                        'elo_updated': False  # Track if ELO has been updated for this match
                     })
                     match_id += 1
             
@@ -811,7 +908,7 @@ if st.session_state.tournament_generated:
     st.sidebar.download_button(
         label="📥 Download Tournament",
         data=json.dumps(export_data, indent=2),
-        file_name="tournament_data.json",
+        file_file_name="tournament_data.json",
         mime="application/json",
         help="Download tournament data to restore later",
         use_container_width=True
@@ -845,22 +942,22 @@ with tab1:
         with col1:
             st.markdown("""
             ### 🎯 How to use:
-            1. **Set the number of players** - Choose 2-20 participants
-            2. **Enter player names** - Customize each player's name
-            3. **Choose rounds** - Decide how many times each pair plays
-            4. **Generate!** - Click the button to create your tournament
-            5. **Enter scores** - Update results as matches are played
-            6. **Track standings** - Watch the leaderboard update in real-time
+            1. **Select players** - Choose from database or add new ones
+            2. **Set rounds** - Decide how many times each pair plays
+            3. **Generate!** - Click the button to create your tournament
+            4. **Enter scores** - Update results as matches are played
+            5. **Track standings** - Watch the leaderboard update in real-time
+            6. **ELO updates** - Player ratings automatically adjust after matches
             """)
         
         with col2:
             st.markdown("""
             ### 💡 Features:
             - **Smart Scheduling** - Uses official round-robin algorithm
-            - **Auto-Save** - Your data is saved in the URL
-            - **No Data Loss** - Refresh the page safely
+            - **Auto ELO Updates** - Ratings adjust automatically after matches
+            - **Real-time Rankings** - ELO rankings update instantly
+            - **Database Integration** - All data stored in MongoDB
             - **Export/Import** - Download and restore tournaments
-            - **Real-time Updates** - Instant standings calculation
             - **Fair Distribution** - Balanced match scheduling
             """)
     else:
@@ -1017,25 +1114,49 @@ with tab1:
                     # Update button centered
                     col_empty1, col_button, col_empty2 = st.columns([2, 1, 2])
                     with col_button:
-                        if st.button(
+                        update_button = st.button(
                             "✅ Update" if not match['completed'] else "✓ Updated",
                             key=f"update_{match['match_id']}",
                             type="secondary" if match['completed'] else "primary",
                             use_container_width=True
-                        ):
-                            # Update match
-                            for m in st.session_state.matches:
-                                if m['match_id'] == match['match_id']:
-                                    m['score1'] = score1
-                                    m['score2'] = score2
-                                    m['completed'] = True
-                                    break
-                            
-                            # Save to query params
-                            save_to_query_params()
-                            st.rerun()
+                        )
+                    
+                    # Show ELO change info if match was completed and ELO was updated
+                    if match['completed'] and match.get('elo_updated'):
+                        st.info(f"""
+                        **ELO Changes:**
+                        - **{match['player1']}**: {match.get('player1_elo_change', 0):+d} (New ELO: {match.get('player1_new_elo', 0)})
+                        - **{match['player2']}**: {match.get('player2_elo_change', 0):+d} (New ELO: {match.get('player2_new_elo', 0)})
+                        """)
                     
                     st.markdown('</div>', unsafe_allow_html=True)
+                    
+                    # Handle match update
+                    if update_button:
+                        # Update match scores
+                        for m in st.session_state.matches:
+                            if m['match_id'] == match['match_id']:
+                                m['score1'] = score1
+                                m['score2'] = score2
+                                
+                                # Only update ELO if the match wasn't already completed
+                                if not m['completed']:
+                                    m['completed'] = True
+                                    # Calculate and update ELO
+                                    elo_info = update_match_with_elo(m, score1, score2)
+                                    # Store ELO change information
+                                    m.update(elo_info)
+                                    m['elo_updated'] = True
+                                    
+                                    st.success("Match updated and ELO ratings adjusted!")
+                                else:
+                                    m['completed'] = True
+                                    st.success("Match scores updated!")
+                                break
+                        
+                        # Save to query params
+                        save_to_query_params()
+                        st.rerun()
                     
                     if idx < len(round_matches) - 1:
                         st.markdown("<br>", unsafe_allow_html=True)
@@ -1072,6 +1193,20 @@ with tab2:
         elo_html += '</div>'
         
         st.markdown(elo_html, unsafe_allow_html=True)
+        
+        # Add some statistics
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Total Players", len(elo_df))
+        
+        with col2:
+            highest_elo = int(elo_df['ELO'].max())
+            st.metric("Highest ELO", highest_elo)
+        
+        with col3:
+            avg_elo = int(elo_df['ELO'].mean())
+            st.metric("Average ELO", avg_elo)
         
     else:
         st.warning("No ELO data found in the database. Please check your database connection and data.")

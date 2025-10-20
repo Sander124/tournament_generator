@@ -425,7 +425,7 @@ def init_connection():
 def get_elo_rankings():
     """Fetch ELO rankings from MongoDB"""
     db = init_connection()
-    st.write(db.tournametDB.list_collection_names())
+    st.write(db.tournamentDB)
     if db is None:
         return None
     

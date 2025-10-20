@@ -686,8 +686,6 @@ if available_players:
                 st.session_state.selected_players.append(selected_player)
                 st.session_state.tournament_generated = False
                 st.rerun()
-else:
-    st.sidebar.info("No players available in database")
 
 # Display selected players with remove buttons
 st.sidebar.markdown("### Selected Players")

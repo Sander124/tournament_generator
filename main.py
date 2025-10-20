@@ -3,13 +3,14 @@ import pandas as pd
 from itertools import combinations
 import random
 import json
+import pymongo
 
 # Page configuration
 st.set_page_config(
-    page_title="Football Group Stage Generator",
+    page_title="Group Stage Generator",
     layout="wide",
     initial_sidebar_state="expanded",
-    page_icon="⚽"
+    page_icon="🏆"
 )
 
 # Custom CSS for modern, vibrant styling
@@ -411,6 +412,41 @@ def save_to_query_params():
     }
     st.query_params['tournament_data'] = json.dumps(data)
 
+# MongoDB connection
+@st.cache_resource
+def init_connection():
+    try:
+        client = pymongo.MongoClient(st.secrets["mongo"]["connection_string"])
+        return client[st.secrets["mongo"]["database"]]
+    except Exception as e:
+        st.error(f"Database connection failed: {e}")
+        return None
+
+def get_elo_rankings():
+    """Fetch ELO rankings from MongoDB"""
+    db = init_connection()
+    if db is None:
+        return None
+    
+    try:
+        # Assuming your collection name is 'players' or similar
+        # Adjust the collection name as needed
+        collection = db['players']
+        players_data = list(collection.find({}, {'player': 1, 'ELO': 1, '_id': 0}))
+        
+        # Convert to DataFrame and sort by ELO (descending)
+        if players_data:
+            df = pd.DataFrame(players_data)
+            df = df.sort_values('ELO', ascending=False)
+            df = df.reset_index(drop=True)
+            df.index = df.index + 1  # Start positions from 1
+            return df
+        else:
+            return None
+    except Exception as e:
+        st.error(f"Error fetching ELO rankings: {e}")
+        return None
+
 def round_robin_schedule(players, rounds):
     """
     Generate a balanced round-robin schedule using the circle method.
@@ -499,7 +535,7 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 # Sidebar
-st.sidebar.markdown('<h2 style="text-align: center;">⚽ Tournament Setup</h2>', unsafe_allow_html=True)
+st.sidebar.markdown('<h2 style="text-align: center;">Tournament Setup</h2>', unsafe_allow_html=True)
 st.sidebar.markdown("---")
 
 # Number of players - using text input as workaround for visibility
@@ -631,238 +667,276 @@ if st.session_state.tournament_generated:
         except Exception as e:
             st.sidebar.error(f"❌ Error loading file: {str(e)}")
 
-# Main content
-st.markdown('<h1 class="trophy-icon">🏆 Football Group Stage Tournament 🏆</h1>', unsafe_allow_html=True)
+# Main content with tabs
+tab1, tab2 = st.tabs(["🏆 Tournament", "📈 ELO Rankings"])
 
-if not st.session_state.tournament_generated:
-    st.info("👈 Configure your tournament in the sidebar and click 'Generate Tournament' to start!")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("""
-        ### 🎯 How to use:
-        1. **Set the number of players** - Choose 2-20 participants
-        2. **Enter player names** - Customize each player's name
-        3. **Choose rounds** - Decide how many times each pair plays
-        4. **Generate!** - Click the button to create your tournament
-        5. **Enter scores** - Update results as matches are played
-        6. **Track standings** - Watch the leaderboard update in real-time
-        """)
-    
-    with col2:
-        st.markdown("""
-        ### 💡 Features:
-        - **Smart Scheduling** - Uses official round-robin algorithm
-        - **Auto-Save** - Your data is saved in the URL
-        - **No Data Loss** - Refresh the page safely
-        - **Export/Import** - Download and restore tournaments
-        - **Real-time Updates** - Instant standings calculation
-        - **Fair Distribution** - Balanced match scheduling
-        """)
-else:
-    # Calculate standings
-    def calculate_standings():
-        standings = {player: {
-            'played': 0,
-            'won': 0,
-            'drawn': 0,
-            'lost': 0,
-            'gf': 0,  # goals for
-            'ga': 0,  # goals against
-            'gd': 0,  # goal difference
-            'points': 0
-        } for player in st.session_state.players}
+with tab1:
+    if not st.session_state.tournament_generated:
+        st.info("👈 Configure your tournament in the sidebar and click 'Generate Tournament' to start!")
         
-        for match in st.session_state.matches:
-            if match['completed']:
-                p1, p2 = match['player1'], match['player2']
-                s1, s2 = match['score1'], match['score2']
-                
-                standings[p1]['played'] += 1
-                standings[p2]['played'] += 1
-                standings[p1]['gf'] += s1
-                standings[p2]['gf'] += s2
-                standings[p1]['ga'] += s2
-                standings[p2]['ga'] += s1
-                
-                if s1 > s2:
-                    standings[p1]['won'] += 1
-                    standings[p1]['points'] += 3
-                    standings[p2]['lost'] += 1
-                elif s2 > s1:
-                    standings[p2]['won'] += 1
-                    standings[p2]['points'] += 3
-                    standings[p1]['lost'] += 1
-                else:
-                    standings[p1]['drawn'] += 1
-                    standings[p2]['drawn'] += 1
-                    standings[p1]['points'] += 1
-                    standings[p2]['points'] += 1
+        col1, col2 = st.columns(2)
         
-        # Calculate goal difference
-        for player in standings:
-            standings[player]['gd'] = standings[player]['gf'] - standings[player]['ga']
+        with col1:
+            st.markdown("""
+            ### 🎯 How to use:
+            1. **Set the number of players** - Choose 2-20 participants
+            2. **Enter player names** - Customize each player's name
+            3. **Choose rounds** - Decide how many times each pair plays
+            4. **Generate!** - Click the button to create your tournament
+            5. **Enter scores** - Update results as matches are played
+            6. **Track standings** - Watch the leaderboard update in real-time
+            """)
         
-        return standings
-    
-    standings = calculate_standings()
-    
-    # Convert to DataFrame and sort
-    standings_df = pd.DataFrame(standings).T
-    standings_df = standings_df.sort_values(
-        by=['points', 'gd', 'gf'],
-        ascending=[False, False, False]
-    )
-    standings_df.index.name = 'Player'
-    standings_df = standings_df.reset_index()
-    standings_df.insert(0, 'Pos', range(1, len(standings_df) + 1))
-    
-    # Rename columns for display
-    standings_df.columns = ['Pos', 'Player', 'P', 'W', 'D', 'L', 'GF', 'GA', 'GD', 'Pts']
-    
-    # Add medal emojis for top 3
-    def add_medal(row):
-        if row['Pos'] == 1:
-            return f"🥇 {row['Pos']}"
-        elif row['Pos'] == 2:
-            return f"🥈 {row['Pos']}"
-        elif row['Pos'] == 3:
-            return f"🥉 {row['Pos']}"
-        else:
-            return str(row['Pos'])
-    
-    standings_df['Pos'] = standings_df.apply(add_medal, axis=1)
-    
-    # Display standings
-    st.markdown('<h2 style="text-align: center;">📊 Live Standings</h2>', unsafe_allow_html=True)
-    
-    # Create custom HTML table
-    standings_html = '<div class="standings-table">'
-    
-    # Header
-    standings_html += '''
-    <div class="standings-header">
-        <div class="standings-cell">Pos</div>
-        <div class="standings-cell">Player</div>
-        <div class="standings-cell">P</div>
-        <div class="standings-cell">W</div>
-        <div class="standings-cell">D</div>
-        <div class="standings-cell">L</div>
-        <div class="standings-cell">GF</div>
-        <div class="standings-cell">GA</div>
-        <div class="standings-cell">GD</div>
-        <div class="standings-cell">Pts</div>
-    </div>
-    '''
-    
-    # Rows
-    for idx, row in standings_df.iterrows():
-        standings_html += '<div class="standings-row">'
-        standings_html += f'<div class="standings-cell position">{row["Pos"]}</div>'
-        standings_html += f'<div class="standings-cell player-name">{row["Player"]}</div>'
-        standings_html += f'<div class="standings-cell">{row["P"]}</div>'
-        standings_html += f'<div class="standings-cell">{row["W"]}</div>'
-        standings_html += f'<div class="standings-cell">{row["D"]}</div>'
-        standings_html += f'<div class="standings-cell">{row["L"]}</div>'
-        standings_html += f'<div class="standings-cell">{row["GF"]}</div>'
-        standings_html += f'<div class="standings-cell">{row["GA"]}</div>'
-        standings_html += f'<div class="standings-cell">{row["GD"]}</div>'
-        standings_html += f'<div class="standings-cell points">{row["Pts"]}</div>'
-        standings_html += '</div>'
-    
-    standings_html += '</div>'
-    
-    st.markdown(standings_html, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # Match schedule
-    st.markdown('<h2 style="text-align: center;">📅 Match Schedule</h2>', unsafe_allow_html=True)
-    
-    # Group matches by round
-    if st.session_state.rounds > 1:
-        round_tabs = st.tabs([f"🔵 Round {i+1}" for i in range(st.session_state.rounds)])
+        with col2:
+            st.markdown("""
+            ### 💡 Features:
+            - **Smart Scheduling** - Uses official round-robin algorithm
+            - **Auto-Save** - Your data is saved in the URL
+            - **No Data Loss** - Refresh the page safely
+            - **Export/Import** - Download and restore tournaments
+            - **Real-time Updates** - Instant standings calculation
+            - **Fair Distribution** - Balanced match scheduling
+            """)
     else:
-        round_tabs = [st.container()]
-    
-    for round_num in range(st.session_state.rounds):
-        with round_tabs[round_num]:
-            round_matches = [m for m in st.session_state.matches if m['round'] == round_num + 1]
+        # Calculate standings
+        def calculate_standings():
+            standings = {player: {
+                'played': 0,
+                'won': 0,
+                'drawn': 0,
+                'lost': 0,
+                'gf': 0,  # goals for
+                'ga': 0,  # goals against
+                'gd': 0,  # goal difference
+                'points': 0
+            } for player in st.session_state.players}
             
-            for idx, match in enumerate(round_matches):
-                st.markdown('<div class="match-card">', unsafe_allow_html=True)
+            for match in st.session_state.matches:
+                if match['completed']:
+                    p1, p2 = match['player1'], match['player2']
+                    s1, s2 = match['score1'], match['score2']
+                    
+                    standings[p1]['played'] += 1
+                    standings[p2]['played'] += 1
+                    standings[p1]['gf'] += s1
+                    standings[p2]['gf'] += s2
+                    standings[p1]['ga'] += s2
+                    standings[p2]['ga'] += s1
+                    
+                    if s1 > s2:
+                        standings[p1]['won'] += 1
+                        standings[p1]['points'] += 3
+                        standings[p2]['lost'] += 1
+                    elif s2 > s1:
+                        standings[p2]['won'] += 1
+                        standings[p2]['points'] += 3
+                        standings[p1]['lost'] += 1
+                    else:
+                        standings[p1]['drawn'] += 1
+                        standings[p2]['drawn'] += 1
+                        standings[p1]['points'] += 1
+                        standings[p2]['points'] += 1
+            
+            # Calculate goal difference
+            for player in standings:
+                standings[player]['gd'] = standings[player]['gf'] - standings[player]['ga']
+            
+            return standings
+        
+        standings = calculate_standings()
+        
+        # Convert to DataFrame and sort
+        standings_df = pd.DataFrame(standings).T
+        standings_df = standings_df.sort_values(
+            by=['points', 'gd', 'gf'],
+            ascending=[False, False, False]
+        )
+        standings_df.index.name = 'Player'
+        standings_df = standings_df.reset_index()
+        standings_df.insert(0, 'Pos', range(1, len(standings_df) + 1))
+        
+        # Rename columns for display
+        standings_df.columns = ['Pos', 'Player', 'P', 'W', 'D', 'L', 'GF', 'GA', 'GD', 'Pts']
+        
+        # Display standings
+        st.markdown('<h2 style="text-align: center;">📊 Live Standings</h2>', unsafe_allow_html=True)
+        
+        # Create custom HTML table
+        standings_html = '<div class="standings-table">'
+        
+        # Header
+        standings_html += '''
+        <div class="standings-header">
+            <div class="standings-cell">Pos</div>
+            <div class="standings-cell">Player</div>
+            <div class="standings-cell">P</div>
+            <div class="standings-cell">W</div>
+            <div class="standings-cell">D</div>
+            <div class="standings-cell">L</div>
+            <div class="standings-cell">GF</div>
+            <div class="standings-cell">GA</div>
+            <div class="standings-cell">GD</div>
+            <div class="standings-cell">Pts</div>
+        </div>
+        '''
+        
+        # Rows
+        for idx, row in standings_df.iterrows():
+            standings_html += '<div class="standings-row">'
+            standings_html += f'<div class="standings-cell position">{row["Pos"]}</div>'
+            standings_html += f'<div class="standings-cell player-name">{row["Player"]}</div>'
+            standings_html += f'<div class="standings-cell">{row["P"]}</div>'
+            standings_html += f'<div class="standings-cell">{row["W"]}</div>'
+            standings_html += f'<div class="standings-cell">{row["D"]}</div>'
+            standings_html += f'<div class="standings-cell">{row["L"]}</div>'
+            standings_html += f'<div class="standings-cell">{row["GF"]}</div>'
+            standings_html += f'<div class="standings-cell">{row["GA"]}</div>'
+            standings_html += f'<div class="standings-cell">{row["GD"]}</div>'
+            standings_html += f'<div class="standings-cell points">{row["Pts"]}</div>'
+            standings_html += '</div>'
+        
+        standings_html += '</div>'
+        
+        st.markdown(standings_html, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Match schedule
+        st.markdown('<h2 style="text-align: center;">📅 Match Schedule</h2>', unsafe_allow_html=True)
+        
+        # Group matches by round
+        if st.session_state.rounds > 1:
+            round_tabs = st.tabs([f"🔵 Round {i+1}" for i in range(st.session_state.rounds)])
+        else:
+            round_tabs = [st.container()]
+        
+        for round_num in range(st.session_state.rounds):
+            with round_tabs[round_num]:
+                round_matches = [m for m in st.session_state.matches if m['round'] == round_num + 1]
                 
-                col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 2])
-                
-                with col1:
-                    st.markdown(f'<p class="team-name" style="text-align: center;">{match["player1"]}</p>', unsafe_allow_html=True)
-                
-                with col2:
-                    score1 = st.number_input(
-                        "Score",
-                        min_value=0,
-                        max_value=99,
-                        value=int(match['score1']) if match['score1'] is not None else 0,
-                        key=f"score1_{match['match_id']}",
-                        label_visibility="collapsed"
-                    )
-                
-                with col3:
-                    st.markdown("<div style='text-align: center; padding-top: 8px; color: white; font-weight: bold; font-size: 1.2rem;'>VS</div>", unsafe_allow_html=True)
-                
-                with col4:
-                    score2 = st.number_input(
-                        "Score",
-                        min_value=0,
-                        max_value=99,
-                        value=int(match['score2']) if match['score2'] is not None else 0,
-                        key=f"score2_{match['match_id']}",
-                        label_visibility="collapsed"
-                    )
-                
-                with col5:
-                    st.markdown(f'<p class="team-name" style="text-align: center;">{match["player2"]}</p>', unsafe_allow_html=True)
-                
-                # Update button centered
-                col_empty1, col_button, col_empty2 = st.columns([2, 1, 2])
-                with col_button:
-                    if st.button(
-                        "✅ Update" if not match['completed'] else "✓ Updated",
-                        key=f"update_{match['match_id']}",
-                        type="secondary" if match['completed'] else "primary",
-                        use_container_width=True
-                    ):
-                        # Update match
-                        for m in st.session_state.matches:
-                            if m['match_id'] == match['match_id']:
-                                m['score1'] = score1
-                                m['score2'] = score2
-                                m['completed'] = True
-                                break
-                        
-                        # Save to query params
-                        save_to_query_params()
-                        st.rerun()
-                
-                st.markdown('</div>', unsafe_allow_html=True)
-                
-                if idx < len(round_matches) - 1:
-                    st.markdown("<br>", unsafe_allow_html=True)
+                for idx, match in enumerate(round_matches):
+                    st.markdown('<div class="match-card">', unsafe_allow_html=True)
+                    
+                    col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 2])
+                    
+                    with col1:
+                        st.markdown(f'<p class="team-name" style="text-align: center;">{match["player1"]}</p>', unsafe_allow_html=True)
+                    
+                    with col2:
+                        score1 = st.number_input(
+                            "Score",
+                            min_value=0,
+                            max_value=99,
+                            value=int(match['score1']) if match['score1'] is not None else 0,
+                            key=f"score1_{match['match_id']}",
+                            label_visibility="collapsed"
+                        )
+                    
+                    with col3:
+                        st.markdown("<div style='text-align: center; padding-top: 8px; color: white; font-weight: bold; font-size: 1.2rem;'>VS</div>", unsafe_allow_html=True)
+                    
+                    with col4:
+                        score2 = st.number_input(
+                            "Score",
+                            min_value=0,
+                            max_value=99,
+                            value=int(match['score2']) if match['score2'] is not None else 0,
+                            key=f"score2_{match['match_id']}",
+                            label_visibility="collapsed"
+                        )
+                    
+                    with col5:
+                        st.markdown(f'<p class="team-name" style="text-align: center;">{match["player2"]}</p>', unsafe_allow_html=True)
+                    
+                    # Update button centered
+                    col_empty1, col_button, col_empty2 = st.columns([2, 1, 2])
+                    with col_button:
+                        if st.button(
+                            "✅ Update" if not match['completed'] else "✓ Updated",
+                            key=f"update_{match['match_id']}",
+                            type="secondary" if match['completed'] else "primary",
+                            use_container_width=True
+                        ):
+                            # Update match
+                            for m in st.session_state.matches:
+                                if m['match_id'] == match['match_id']:
+                                    m['score1'] = score1
+                                    m['score2'] = score2
+                                    m['completed'] = True
+                                    break
+                            
+                            # Save to query params
+                            save_to_query_params()
+                            st.rerun()
+                    
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    
+                    if idx < len(round_matches) - 1:
+                        st.markdown("<br>", unsafe_allow_html=True)
+
+with tab2:
+    st.markdown('<h2 style="text-align: center;">📈 ELO Rankings</h2>', unsafe_allow_html=True)
     
-    # Statistics
-    total_matches = len(st.session_state.matches)
-    completed_matches = sum(1 for m in st.session_state.matches if m['completed'])
-    remaining_matches = total_matches - completed_matches
+    # Fetch ELO rankings from database
+    elo_df = get_elo_rankings()
     
-    st.markdown("---")
-    st.markdown('<h2 style="text-align: center;">📈 Tournament Statistics</h2>', unsafe_allow_html=True)
-    
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("🎯 Total Matches", total_matches)
-    col2.metric("✅ Completed", completed_matches)
-    col3.metric("⏳ Remaining", remaining_matches)
-    
-    if total_matches > 0:
-        progress = (completed_matches / total_matches) * 100
-        col4.metric("📊 Progress", f"{progress:.1f}%")
+    if elo_df is not None and not elo_df.empty:
+        # Create custom HTML table for ELO rankings
+        elo_html = '<div class="standings-table">'
+        
+        # Header for ELO rankings
+        elo_html += '''
+        <div class="standings-header">
+            <div class="standings-cell">Rank</div>
+            <div class="standings-cell">Player</div>
+            <div class="standings-cell">ELO</div>
+        </div>
+        '''
+        
+        # Rows for ELO rankings
+        for idx, row in elo_df.iterrows():
+            elo_html += '<div class="standings-row">'
+            elo_html += f'<div class="standings-cell position">{idx}</div>'
+            elo_html += f'<div class="standings-cell player-name">{row["player"]}</div>'
+            elo_html += f'<div class="standings-cell points">{int(row["ELO"])}</div>'
+            elo_html += '</div>'
+        
+        elo_html += '</div>'
+        
+        st.markdown(elo_html, unsafe_allow_html=True)
+        
+        # Add some statistics
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Total Players", len(elo_df))
+        
+        with col2:
+            highest_elo = int(elo_df['ELO'].max())
+            st.metric("Highest ELO", highest_elo)
+        
+        with col3:
+            avg_elo = int(elo_df['ELO'].mean())
+            st.metric("Average ELO", avg_elo)
+        
+    else:
+        st.warning("No ELO data found in the database. Please check your database connection and data.")
+        st.info("""
+        **Expected database structure:**
+        - Collection: 'players' (or adjust in code)
+        - Fields: 'player' (string), 'ELO' (number)
+        
+        **To test the connection:**
+        1. Make sure your MongoDB connection string is correct
+        2. Ensure the database has a collection with player ELO data
+        3. Verify the collection has documents with 'player' and 'ELO' fields
+        """)
+
+# Footer
+st.markdown("---")
+st.markdown(
+    '<div style="text-align: center; color: rgba(255, 255, 255, 0.7); font-family: Inter, sans-serif;">'
+    'Made with ❤️ | Tournament Generator v2.0 | Now with ELO Rankings!'
+    '</div>',
+    unsafe_allow_html=True
+)

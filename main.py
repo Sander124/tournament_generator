@@ -1216,7 +1216,7 @@ with tab1:
                             type="secondary" if match['completed'] else "primary",
                             use_container_width=True
                         )
-                    
+                    '''
                     # Show ELO change info if match was completed and ELO was updated
                     if match['completed'] and match.get('elo_updated'):
                         st.info(f"""
@@ -1224,7 +1224,7 @@ with tab1:
                         - **{match['player1']}**: {match.get('player1_elo_change', 0):+d} (New ELO: {match.get('player1_new_elo', 0)})
                         - **{match['player2']}**: {match.get('player2_elo_change', 0):+d} (New ELO: {match.get('player2_new_elo', 0)})
                         """)
-                    
+                    '''
                     st.markdown('</div>', unsafe_allow_html=True)
                     
                     # Handle match update

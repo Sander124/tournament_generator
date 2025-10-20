@@ -932,7 +932,6 @@ if st.session_state.tournament_generated:
 tab1, tab2 = st.tabs(["🏆 Tournament", "📈 ELO Rankings"])
 
 with tab1:
-    with tab1:
     if not st.session_state.tournament_generated:
         st.info("👈 Configure your tournament in the sidebar and click 'Generate Tournament' to start!")
         

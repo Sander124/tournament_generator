@@ -370,6 +370,98 @@ st.markdown("""
         transition: transform 0.3s ease;
         box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.5);
     }
+    /* Info box styling - improved readability */
+    .stAlert {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        color: white;
+        font-family: 'Inter', sans-serif;
+        font-weight: 500;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
+
+    /* Improve text contrast in info sections */
+    .stMarkdown {
+        color: rgba(255, 255, 255, 0.95) !important;
+    }
+
+    .stMarkdown h3 {
+        color: white !important;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .stMarkdown li {
+        color: rgba(255, 255, 255, 0.95) !important;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        margin-bottom: 8px;
+    }
+
+    /* Remove background from tabs container */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        background: transparent !important;
+        border-radius: 15px;
+        padding: 0.5rem;
+    }
+
+    /* Clean tab styling without background */
+    .stTabs [data-baseweb="tab"] {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border-radius: 10px;
+        color: white;
+        font-weight: 600;
+        font-family: 'Montserrat', sans-serif;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin: 0 2px;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* Improve main container readability */
+    .main .block-container {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    /* Better text contrast for all content */
+    .stMarkdown p {
+        color: rgba(255, 255, 255, 0.95) !important;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        line-height: 1.6;
+    }
+
+    /* Improve the how-to-use section specifically */
+    .how-to-use-section {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin: 1rem 0;
+    }
+
+    .how-to-use-section h3 {
+        color: white !important;
+        margin-bottom: 1rem;
+    }
+
+    .how-to-use-section li {
+        color: rgba(255, 255, 255, 0.95) !important;
+        margin-bottom: 0.5rem;
+        padding-left: 0.5rem;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 

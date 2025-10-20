@@ -373,7 +373,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state with query params for persistence
 def init_session_state():
     # Try to load from query params first (for page refresh persistence)
     query_params = st.query_params
@@ -384,8 +383,8 @@ def init_session_state():
             st.session_state.players = data.get('players', [])
             st.session_state.matches = data.get('matches', [])
             st.session_state.tournament_generated = data.get('tournament_generated', False)
-            st.session_state.num_players = data.get('num_players', 4)
             st.session_state.rounds = data.get('rounds', 1)
+            st.session_state.selected_players = data.get('selected_players', [])
         except:
             pass
     
@@ -396,10 +395,10 @@ def init_session_state():
         st.session_state.matches = []
     if 'tournament_generated' not in st.session_state:
         st.session_state.tournament_generated = False
-    if 'num_players' not in st.session_state:
-        st.session_state.num_players = 4
     if 'rounds' not in st.session_state:
         st.session_state.rounds = 1
+    if 'selected_players' not in st.session_state:
+        st.session_state.selected_players = []
 
 def save_to_query_params():
     """Save tournament state to query params for persistence across refreshes"""
@@ -579,32 +578,183 @@ st.sidebar.markdown("""
 st.sidebar.markdown('<h2 style="text-align: center;">Tournament Setup</h2>', unsafe_allow_html=True)
 st.sidebar.markdown("---")
 
-# Number of players - using text input as workaround for visibility
-num_players_str = st.sidebar.text_input(
-    "Number of Players",
-    value=str(st.session_state.num_players),
-    key="num_players_input"
+# Initialize session state for selected players
+if 'selected_players' not in st.session_state:
+    st.session_state.selected_players = []
+
+def get_all_players_from_db():
+    """Get all players from database for dropdown"""
+    db = init_connection()
+    if db is None:
+        return []
+    
+    try:
+        # Try different collection names
+        collection_names = ['players', 'player', 'elos', 'elo_rankings', 'rankings', 'tournamentDB']
+        
+        for collection_name in collection_names:
+            try:
+                collection = db[collection_name]
+                players_data = list(collection.find({}, {'_id': 0}))
+                
+                if players_data:
+                    players = []
+                    for doc in players_data:
+                        # Extract player name
+                        player_name = None
+                        for field in ['player', 'name', 'username', 'Player', 'Name']:
+                            if field in doc and doc[field]:
+                                player_name = doc[field]
+                                break
+                        
+                        # Extract ELO
+                        elo_value = 500  # default
+                        for field in ['ELO', 'elo', 'rating', 'Rating', 'score', 'points']:
+                            if field in doc and doc[field] is not None:
+                                try:
+                                    elo_value = int(doc[field])
+                                    break
+                                except (ValueError, TypeError):
+                                    continue
+                        
+                        if player_name:
+                            players.append({
+                                'name': player_name,
+                                'elo': elo_value
+                            })
+                    
+                    return players
+            except:
+                continue
+        return []
+    except:
+        return []
+
+def add_player_to_db(player_name, elo=500):
+    """Add a new player to the database"""
+    db = init_connection()
+    if db is None:
+        return False
+    
+    try:
+        # Try different collection names
+        collection_names = ['players', 'player', 'elos', 'elo_rankings']
+        
+        for collection_name in collection_names:
+            try:
+                collection = db[collection_name]
+                # Check if player already exists
+                existing = collection.find_one({'player': player_name})
+                if not existing:
+                    collection.insert_one({
+                        'player': player_name,
+                        'ELO': elo
+                    })
+                    return True
+                else:
+                    return False  # Player already exists
+            except:
+                continue
+        return False
+    except:
+        return False
+
+st.sidebar.markdown('<h3 style="text-align: center;">👥 Select Players</h3>', unsafe_allow_html=True)
+
+# Get all available players from database
+all_players = get_all_players_from_db()
+available_players = [p for p in all_players if p['name'] not in [sp['name'] for sp in st.session_state.selected_players]]
+
+# Player selection dropdown
+if available_players:
+    # Create formatted options for dropdown
+    dropdown_options = [f"{p['name']} ({p['elo']} ELO)" for p in available_players]
+    dropdown_options.insert(0, "Select a player...")
+    
+    selected_option = st.sidebar.selectbox(
+        "Choose from database",
+        options=dropdown_options,
+        key="player_dropdown"
+    )
+    
+    # Add selected player to tournament
+    if selected_option and selected_option != "Select a player...":
+        selected_index = dropdown_options.index(selected_option) - 1  # -1 because of the placeholder
+        if selected_index >= 0 and selected_index < len(available_players):
+            selected_player = available_players[selected_index]
+            if selected_player not in st.session_state.selected_players:
+                st.session_state.selected_players.append(selected_player)
+                st.session_state.tournament_generated = False
+                st.rerun()
+else:
+    st.sidebar.info("No players available in database")
+
+# Display selected players with remove buttons
+st.sidebar.markdown("### Selected Players")
+if st.session_state.selected_players:
+    for i, player in enumerate(st.session_state.selected_players):
+        col1, col2 = st.sidebar.columns([3, 1])
+        with col1:
+            st.sidebar.markdown(
+                f'<div style="background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 8px; margin: 5px 0; border: 1px solid rgba(255,255,255,0.2);">'
+                f'<span style="font-weight: 600; color: white;">{player["name"]}</span> '
+                f'<span style="color: #5a7dff; font-size: 0.9em;">({player["elo"]} ELO)</span>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+        with col2:
+            if st.sidebar.button("🗑️", key=f"remove_{i}", help="Remove player"):
+                st.session_state.selected_players.pop(i)
+                st.session_state.tournament_generated = False
+                st.rerun()
+else:
+    st.sidebar.info("No players selected")
+
+# Add new player section
+st.sidebar.markdown("---")
+st.sidebar.markdown('<h3 style="text-align: center;">➕ Add New Player</h3>', unsafe_allow_html=True)
+
+new_player_name = st.sidebar.text_input(
+    "Player Name",
+    placeholder="Enter new player name...",
+    key="new_player_input"
 )
 
-# Convert to integer and validate
-try:
-    num_players = int(num_players_str)
-    if num_players < 2:
-        num_players = 2
-        st.sidebar.warning("Minimum 2 players required")
-    elif num_players > 20:
-        num_players = 20
-        st.sidebar.warning("Maximum 20 players allowed")
-except ValueError:
-    num_players = st.session_state.num_players
-    st.sidebar.error("Please enter a valid number")
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    new_player_elo = st.sidebar.number_input(
+        "ELO Rating",
+        min_value=0,
+        max_value=3000,
+        value=500,
+        key="new_player_elo"
+    )
+with col2:
+    st.sidebar.markdown("<br>", unsafe_allow_html=True)
+    add_button = st.sidebar.button("Add Player", type="secondary", use_container_width=True)
 
-# Update session state if number changes
-if num_players != st.session_state.num_players:
-    st.session_state.num_players = num_players
-    st.session_state.tournament_generated = False
+if add_button and new_player_name.strip():
+    # Check if player already exists in database
+    existing_names = [p['name'] for p in all_players]
+    if new_player_name.strip() in existing_names:
+        st.sidebar.error("Player already exists in database!")
+    else:
+        # Add to database
+        if add_player_to_db(new_player_name.strip(), new_player_elo):
+            # Also add to selected players
+            new_player = {'name': new_player_name.strip(), 'elo': new_player_elo}
+            if new_player not in st.session_state.selected_players:
+                st.session_state.selected_players.append(new_player)
+                st.session_state.tournament_generated = False
+                st.sidebar.success(f"Added {new_player_name.strip()}!")
+                st.rerun()
+        else:
+            st.sidebar.error("Failed to add player to database")
 
-# Rounds (how many times each player plays each other) - using text input
+st.sidebar.markdown("---")
+
+# Rounds selection
+st.sidebar.markdown('<h3 style="text-align: center;">🔄 Tournament Rounds</h3>', unsafe_allow_html=True)
 rounds_str = st.sidebar.text_input(
     "Rounds (matches per pair)",
     value=str(st.session_state.rounds),
@@ -630,29 +780,14 @@ if rounds != st.session_state.rounds:
     st.session_state.tournament_generated = False
 
 st.sidebar.markdown("---")
-st.sidebar.markdown('<h3 style="text-align: center;">👥 Player Names</h3>', unsafe_allow_html=True)
-
-# Dynamic player name inputs
-player_names = []
-for i in range(num_players):
-    default_name = st.session_state.players[i] if i < len(st.session_state.players) else f"Player {i+1}"
-    name = st.sidebar.text_input(
-        f"Player {i+1}",
-        value=default_name,
-        key=f"player_{i}"
-    )
-    player_names.append(name)
-
-st.sidebar.markdown("---")
 
 # Generate tournament button
 if st.sidebar.button("🏆 Generate Tournament", type="primary", use_container_width=True):
-    # Validate unique names
-    if len(set(player_names)) != len(player_names):
-        st.sidebar.error("⚠️ All player names must be unique!")
-    elif any(name.strip() == "" for name in player_names):
-        st.sidebar.error("⚠️ All player names must be filled!")
+    if len(st.session_state.selected_players) < 2:
+        st.sidebar.error("⚠️ At least 2 players required!")
     else:
+        # Extract just the player names for tournament generation
+        player_names = [player['name'] for player in st.session_state.selected_players]
         st.session_state.players = player_names
         
         # Generate matches using round-robin scheduling
@@ -665,6 +800,7 @@ if st.sidebar.button("🏆 Generate Tournament", type="primary", use_container_w
 
 # Reset button
 if st.sidebar.button("🔄 Reset Tournament", use_container_width=True):
+    st.session_state.selected_players = []
     st.session_state.matches = []
     st.session_state.tournament_generated = False
     st.query_params.clear()
@@ -680,7 +816,7 @@ if st.session_state.tournament_generated:
         'players': st.session_state.players,
         'matches': st.session_state.matches,
         'rounds': st.session_state.rounds,
-        'num_players': st.session_state.num_players
+        'selected_players': st.session_state.selected_players
     }
     
     st.sidebar.download_button(
@@ -700,7 +836,7 @@ if st.session_state.tournament_generated:
             st.session_state.players = import_data['players']
             st.session_state.matches = import_data['matches']
             st.session_state.rounds = import_data['rounds']
-            st.session_state.num_players = import_data['num_players']
+            st.session_state.selected_players = import_data.get('selected_players', [])
             st.session_state.tournament_generated = True
             save_to_query_params()
             st.sidebar.success("✅ Tournament loaded!")

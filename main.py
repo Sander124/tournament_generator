@@ -1132,8 +1132,6 @@ with tab1:
             <div class="standings-cell">W</div>
             <div class="standings-cell">D</div>
             <div class="standings-cell">L</div>
-            <div class="standings-cell">GF</div>
-            <div class="standings-cell">GA</div>
             <div class="standings-cell">GD</div>
             <div class="standings-cell">Pts</div>
         </div>
@@ -1148,8 +1146,6 @@ with tab1:
             standings_html += f'<div class="standings-cell">{row["W"]}</div>'
             standings_html += f'<div class="standings-cell">{row["D"]}</div>'
             standings_html += f'<div class="standings-cell">{row["L"]}</div>'
-            standings_html += f'<div class="standings-cell">{row["GF"]}</div>'
-            standings_html += f'<div class="standings-cell">{row["GA"]}</div>'
             standings_html += f'<div class="standings-cell">{row["GD"]}</div>'
             standings_html += f'<div class="standings-cell points">{row["Pts"]}</div>'
             standings_html += '</div>'

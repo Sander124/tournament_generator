@@ -483,6 +483,8 @@ def init_session_state():
     # Initialize defaults if not already set
     if 'players' not in st.session_state:
         st.session_state.players = []
+    if 'elo_mode' not in st.session_state:
+        st.session_state.elo_mode = True
     if 'matches' not in st.session_state:
         st.session_state.matches = []
     if 'tournament_generated' not in st.session_state:
@@ -956,6 +958,22 @@ if rounds != st.session_state.rounds:
     st.session_state.tournament_generated = False
 
 st.sidebar.markdown("---")
+st.sidebar.markdown('<h3 style="text-align: center;">ELO Mode</h3>', unsafe_allow_html=True)
+
+elo_mode = st.sidebar.toggle(
+    "Update ELO after every match",
+    value=st.session_state.elo_mode,
+    key="elo_mode_toggle",
+    help="Aan = ELO wordt direct bijgewerkt | Uit = geen ELO-wijzigingen"
+)
+
+if elo_mode != st.session_state.elo_mode:
+    st.session_state.elo_mode = elo_mode
+    # Als we van **aan** naar **uit** gaan, reset de vlaggen zodat oude updates niet meer als “bijgewerkt” tellen
+    if not elo_mode:
+        for m in st.session_state.matches:
+            m['elo_updated'] = False
+    st.rerun()
 
 # Generate tournament button
 if st.sidebar.button("🏆 Generate Tournament", type="primary", use_container_width=True):
@@ -1235,21 +1253,25 @@ with tab1:
                                 m['score1'] = score1
                                 m['score2'] = score2
                                 
-                                # Only update ELO if the match wasn't already completed
+                                # Alleen markeren als voltooid (altijd)
                                 if not m['completed']:
                                     m['completed'] = True
-                                    # Calculate and update ELO
+                    
+                                # ---------- ELO LOGICA ----------
+                                if st.session_state.elo_mode and not m.get('elo_updated', False):
+                                    # ELO bijwerken
                                     elo_info = update_match_with_elo(m, score1, score2)
-                                    # Store ELO change information
                                     m.update(elo_info)
                                     m['elo_updated'] = True
-                                    
-                                    st.success("Match updated and ELO ratings adjusted!")
+                                    st.success("Match updated **and ELO ratings adjusted!**")
+                                elif not st.session_state.elo_mode:
+                                    # Geen ELO-wijziging, maar wel score opslaan
+                                    st.success("Match scores updated (ELO **not** changed).")
                                 else:
-                                    m['completed'] = True
-                                    st.success("Match scores updated!")
+                                    st.success("Match scores updated.")
+                                # --------------------------------
                                 break
-                        
+                    
                         # Save to query params
                         save_to_query_params()
                         st.rerun()
